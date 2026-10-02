@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Graficador de funciones</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+</head>
+<body>
+  <nav>∑ Graficador de funciones</nav>
+  <main>
+    <form method="get">
+      <label>f(x) =
+        <input type="text" name="f" value="{{ texto }}" placeholder="x**2 - 4" autofocus required>
+      </label>
+      <div class="fila">
+        <label>x mínimo <input type="number" name="xmin" value="{{ xmin }}" step="any"></label>
+        <label>x máximo <input type="number" name="xmax" value="{{ xmax }}" step="any"></label>
+        <button type="submit">Graficar</button>
+      </div>
+    </form>
+
+    <p class="ejemplos">
+      Probá:
+      {% for ej in ejemplos %}<a href="{{ url_for('index', f=ej) }}">{{ ej }}</a>{% endfor %}
+    </p>
+
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+    {% if resultado %}
+    <section class="tarjetas">
+      <div class="tarjeta azul">
+        <span>Función</span>
+        <div class="tex" data-tex="f(x) = {{ resultado.f_tex }}"></div>
+      </div>
+      <div class="tarjeta violeta">
+        <span>Derivada</span>
+        <div class="tex" data-tex="f'(x) = {{ resultado.d_tex }}"></div>
+      </div>
+      <div class="tarjeta cian">
+        <span>Integral</span>
+        {% if resultado.i_tex %}
+        <div class="tex" data-tex="\int f(x)\,dx = {{ resultado.i_tex }}"></div>
+        {% else %}
+        <p class="vacio">No encontré una primitiva en forma cerrada.</p>
+        {% endif %}
+      </div>
+      <div class="tarjeta">
+        <span>Raíces{% if not resultado.raices_exactas %} (aproximadas en el rango){% endif %}</span>
+        {% if resultado.raices %}
+          {% for r in resultado.raices %}
+          <div class="tex" data-tex="x {{ '' if r.startswith('\\') else '= ' }}{{ r }}"></div>
+          {% endfor %}
+        {% else %}
+        <p class="vacio">No tiene raíces reales.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="grafico">
+      <h2>Gráfico</h2>
+      <p class="pista">Tocá la leyenda para mostrar u ocultar curvas (la integral empieza oculta).</p>
+      <div class="lienzo"><canvas id="grafico"></canvas></div>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script>
+      document.querySelectorAll('.tex').forEach(el => {
+        katex.render(el.dataset.tex, el, { throwOnError: false });
+      });
+
+      const G = {{ resultado.grafico | tojson }};
+      const css = getComputedStyle(document.documentElement);
+      const color = n => css.getPropertyValue(n).trim();
+      Chart.defaults.color = color('--texto-suave');
+      Chart.defaults.borderColor = '#232b4d';
+
+      const linea = (label, data, c, extra = {}) => ({
+        label, data, borderColor: c, backgroundColor: c,
+        borderWidth: 2.5, pointRadius: 0, tension: 0, ...extra
+      });
+
+      const datasets = [
+        linea('f(x)', G.f, color('--azul')),
+        linea("f'(x)", G.d, color('--violeta'))
+      ];
+      if (G.i) datasets.push(linea('F(x)', G.i, color('--cian'), { hidden: true }));
+      if (G.raices.length) datasets.push({
+        type: 'scatter', label: 'Raíces', data: G.raices,
+        backgroundColor: '#ffffff', pointRadius: 5, pointHoverRadius: 7
+      });
+
+      new Chart(document.getElementById('grafico'), {
+        type: 'line',
+        data: { datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          scales: {
+            x: { type: 'linear' },
+            y: { min: G.ymin, max: G.ymax }
+          }
+        }
+      });
+    </script>
+    {% endif %}
+  </main>
+</body>
+</html>
