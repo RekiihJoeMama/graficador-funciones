@@ -32,5 +32,5 @@ Después abrí http://127.0.0.1:5000 en el navegador.
 
 ## Capturas
 
-![Resultados](capturas/resultados.png)
-![Gráfico](capturas/grafico.png)
+![Resultados](capturas/Funciones.png)
+![Gráfico](capturas/funciones2.png)
